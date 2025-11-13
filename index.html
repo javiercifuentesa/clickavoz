@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicka Voz - Informe de Energía Renovable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Energetic Teal & Warm Gray -->
+    <!-- Application Structure Plan: La aplicación se estructura como un Panel de Control de Energía (Dashboard) con navegación por vistas (pestañas) para facilitar la exploración de las tres áreas clave: Ahorro, Análisis de Facturas (IA) y Sostenibilidad. 
+        - Inicio & Ahorro: Propuesta de valor y una calculadora para estimar el ahorro potencial basado en el consumo (kWh).
+        - Análisis IA: Simulación de la herramienta disruptiva de análisis de facturas (IA) que fue el origen de la empresa.
+        - Sostenibilidad: Visualización de la fuente 100% renovable y el impacto ambiental.
+        - Transparencia: Mensajes clave sobre precios justos, sin permanencia y servicio personalizado.
+        Esta estructura se elige para guiar al usuario a través del ciclo de valor: Descubrir (Inicio), Probar el Ahorro (Calculadora), Entender la Oferta (Análisis IA) y Confiar (Sostenibilidad/Transparencia). -->
+    <!-- Visualization & Content Choices: 
+        1. Inicio: Calculadora de Ahorro -> Meta: Enganchar/Ahorro -> Método: Inputs HTML (slider) + JS para cálculo de ahorro basado en kWh. Justificación: Herramienta de alta intención, permite al usuario cuantificar el beneficio.
+        2. Análisis IA: Insights simulados -> Meta: Destacar el valor añadido (disrupción IA) -> Método: Bloque de texto dinámico (JS show/hide) que simula un análisis de factura. Justificación: Hace tangible el concepto de "análisis de factura por IA".
+        3. Sostenibilidad: Fuentes de Energía -> Meta: Informar/Diferenciación -> Método: Gráfico de Anillo (Chart.js/Canvas) mostrando 100% fuentes renovables. Justificación: Prueba visual del compromiso renovable.
+        4. Transparencia: Precios vs. Mercado -> Meta: Comparar -> Método: Gráfico de Barras (Chart.js/Canvas) comparando el precio de Clicka Voz con el precio medio del mercado. Justificación: Demuestra el valor de "precios justos y más bajos". 
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+            padding: 1rem;
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 50vh;
+                max-height: 80vh;
+            }
+        }
+        @media (min-width: 510px) {
+            .chart-container {
+                height: 400px;
+                max-height: 60vh;
+            }
+        }
+
+        /* Reemplazo de @apply por CSS estándar (cliente) */
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151; /* gray-700 */
+            transition: background-color .2s, color .2s;
+        }
+        .nav-link:hover { background-color: #ccfbf1; color: #065f46; } /* teal hover */
+        .nav-link.active {
+            background-color: #0d9488; /* teal-600 */
+            color: #ffffff;
+        }
+
+        .view-section {
+            padding: 1.5rem;
+            box-sizing: border-box;
+            border-radius: 0.75rem;
+            background: #ffffff;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.03);
+            max-height: none;
+            overflow: visible;
+        }
+
+        main {
+            min-height: calc(100vh - 160px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 2rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background-color: #0d9488;
+            color: white;
+            font-weight: 700;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: background-color .2s;
+            border: none;
+        }
+        .btn-primary:hover { background-color: #0f766e; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-3xl font-bold text-teal-700">Clicka Voz <span class="text-lg font-normal text-gray-500">· Energía Renovable</span></h1>
+            <div class="flex flex-wrap justify-center sm:justify-end gap-2 mt-4 sm:mt-0">
+                <button class="nav-link active" data-view="home">Inicio & Ahorro</button>
+                <button class="nav-link" data-view="ai-analysis">Análisis Inteligente</button>
+                <button class="nav-link" data-view="sustainability">Sostenibilidad</button>
+                <button class="nav-link" data-view="transparency">Transparencia</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+        
+        <section id="view-home" class="view-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4">
+                    <h2 class="text-4xl font-bold text-gray-900">Tu Energía, 100% Renovable y al Mejor Precio.</h2>
+                    <p class="text-lg text-gray-600">
+                        Bienvenido al informe interactivo de Clicka Voz. Somos la comercializadora que garantiza energía **100% renovable** con precios justos, normalmente más bajos que la media del mercado. Esta aplicación te permite cuantificar tu potencial de ahorro y explorar nuestros principios de transparencia y sostenibilidad.
+                    </p>
+                    <p class="text-lg text-gray-600 font-medium">
+                        **Nuestra Propuesta:** Ahorro sin renunciar al planeta. Utiliza la calculadora para ver cuánto podrías reducir tu factura anual.
+                    </p>
+                </div>
+                <div class="bg-teal-50 p-6 rounded-xl shadow-inner space-y-6">
+                    <h3 class="text-2xl font-semibold text-center text-teal-800">Calcula tu Ahorro Potencial</h3>
+                    <div class="space-y-2">
+                        <label for="current-kwh" class="block text-sm font-medium text-gray-700 mb-1">Consumo mensual medio (kWh): <span id="kwh-value" class="font-bold text-teal-700">250 kWh</span></label>
+                        <input type="range" id="current-kwh" min="50" max="1000" step="10" value="250" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer range-lg" style="accent-color: #0d9488;">
+                        <p class="text-xs text-gray-500">Ajusta el slider a tu consumo típico de un hogar.</p>
+                    </div>
+                    
+                    <button id="calculate-savings" class="btn-primary">Estimar Ahorro Anual</button>
+                    <div id="savings-result" class="text-center px-8 py-4 bg-white">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-ai-analysis" class="view-section hidden">
+            <div class="text-center space-y-4">
+                <h2 class="text-3xl font-bold text-gray-900">El Poder de la Inteligencia Artificial</h2>
+                <p class="mt-2 text-lg text-gray-600 max-w-3xl mx-auto">
+                    Nuestro origen fue la disrupción: usar IA para analizar facturas y encontrar el máximo ahorro para el cliente. En esta sección, simulamos cómo nuestra tecnología detecta ineficiencias en una factura de luz estándar, mostrando el valor de un análisis personalizado y rápido.
+                </p>
+                
+                <div class="max-w-xl mx-auto p-6 bg-gray-50 rounded-lg shadow-inner">
+                    <button id="simulate-analysis" class="btn-primary mb-6 bg-orange-500 hover:bg-orange-600">Analizar Factura Simulada con IA</button>
+                    
+                    <div id="ai-insights" class="hidden text-left space-y-4 p-4 border-2 border-orange-300 rounded-lg bg-white">
+                        <h4 class="text-xl font-bold text-orange-700 flex items-center">
+                            <span>🧠</span> &nbsp; Resultados del Análisis de Clicka Voz:
+                        </h4>
+                        <p class="text-gray-700">
+                            La IA ha detectado **tres puntos clave de optimización** en su factura actual (simulada):
+                        </p>
+                        <ul class="list-none space-y-2">
+                            <li class="flex items-start">
+                                <span class="text-xl text-teal-600 mr-3">1.</span>
+                                <p class="text-gray-700"><span class="font-semibold">Potencia Contratada Innecesaria:</span> Se identificó un exceso de 1.5 kW. Ajustar esto podría ahorrarle un **extra de 45€ anuales** en el término fijo.</p>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-xl text-teal-600 mr-3">2.</span>
+                                <p class="text-gray-700"><span class="font-semibold">Optimización de Franjas Horarias:</span> Su consumo pico es más alto de lo necesario. Recomendamos un pequeño cambio de hábitos (ej. poner la lavadora después de las 22:00h) para ahorrar un **12% adicional**.</p>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-xl text-teal-600 mr-3">3.</span>
+                                <p class="text-gray-700"><span class="font-semibold">Precio del kWh Superior al Mercado:</span> Su precio actual es un 18% más alto que el precio medio de Clicka Voz. Esto representa el mayor potencial de ahorro.</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="view-sustainability" class="view-section hidden">
+            <div class="text-center space-y-6">
+                <h2 class="text-3xl font-bold text-gray-900">100% Energía Limpia Garantizada</h2>
+                <p class="mt-2 text-lg text-gray-600 max-w-3xl mx-auto">
+                    Clicka Voz solo comercializa energía con Certificado de Garantía de Origen (GdO) que acredita su procedencia 100% renovable. Entender de dónde viene tu energía es clave para un futuro más verde.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4">Fuentes de Energía Contratadas</h3>
+                        <div class="chart-container" style="max-width: 400px; height: 600px;">
+                            <canvas id="renewable-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-teal-100 p-6 rounded-lg shadow-md space-y-4 text-left">
+                        <h3 class="text-2xl font-semibold text-teal-800 flex items-center">
+                            <span>🌱</span> &nbsp; Impacto Ambiental por Cliente
+                        </h3>
+                        <p class="text-gray-700">
+                            Un hogar promedio (250 kWh/mes) al usar energía 100% renovable con Clicka Voz evita la emisión de CO₂ equivalente a:
+                        </p>
+                        <div class="flex items-center space-x-4 bg-white p-3 rounded-md shadow-sm">
+                            <span class="text-4xl text-teal-600">🌳</span>
+                            <div>
+                                <p class="text-xl font-bold">12 árboles</p>
+                                <p class="text-sm text-gray-500">plantados anualmente</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 bg-white p-3 rounded-md shadow-sm">
+                            <span class="text-4xl text-teal-600">🚗</span>
+                            <div>
+                                <p class="text-xl font-bold">1800 km</p>
+                                <p class="text-sm text-gray-500">evitando emisiones de un coche medio</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-transparency" class="view-section hidden">
+            <div class="text-center space-y-6">
+                <h2 class="text-3xl font-bold text-gray-900">Precios Justos y Servicio Transparente</h2>
+                <p class="mt-2 text-lg text-gray-600 max-w-3xl mx-auto">
+                    Nuestra filosofía se basa en la honestidad. Ofrecemos precios simples, justos y más bajos que la mayoría. Sin permanencia. Sin asteriscos.
+                </p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4 text-center">Comparación de Precio del kWh (Simulado)</h3>
+                        <p class="text-sm text-gray-500 mb-2 text-center">Clicka Voz vs. Media de las 5 Mayores Comercializadoras (Tarifa Fija)</p>
+                        <div class="chart-container" style="max-width: 600px; height: 350px;">
+                            <canvas id="price-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1 bg-gray-50 p-6 rounded-lg shadow-inner text-left space-y-4 flex flex-col justify-center">
+                        <div class="space-y-2">
+                            <h4 class="text-xl font-bold text-teal-700 flex items-center">
+                                <span>⚖️</span> &nbsp; Sin Permanencia
+                            </h4>
+                            <p class="text-gray-700">
+                                Creemos en ganarnos tu confianza cada día. Puedes irte cuando quieras, sin penalizaciones.
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <h4 class="text-xl font-bold text-teal-700 flex items-center">
+                                <span>💬</span> &nbsp; Atención Personalizada
+                            </h4>
+                            <p class="text-gray-700">
+                                Un servicio rápido y humano que realmente te ayuda con cualquier duda sobre tu factura o consumo.
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <h4 class="text-xl font-bold text-teal-700 flex items-center">
+                                <span>🏷️</span> &nbsp; Precios Claros
+                            </h4>
+                            <p class="text-gray-700">
+                                Te garantizamos un precio estable y competitivo, sin sustos ni letra pequeña.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </main>
+
+    <footer class="text-center p-6 bg-white border-t border-gray-200 mt-12">
+        <p class="text-gray-500 text-sm">© 2025 Clicka Voz. Informe Interactivo de Energía Renovable.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const navLinks = document.querySelectorAll('.nav-link');
+            const views = document.querySelectorAll('.view-section');
+
+            function updateActiveView(viewId) {
+                views.forEach(view => {
+                    view.classList.add('hidden');
+                });
+                const el = document.getElementById(`view-${viewId}`);
+                if (el) el.classList.remove('hidden');
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.dataset.view === viewId) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    updateActiveView(e.currentTarget.dataset.view);
+                });
+            });
+
+            // --- View 1: Home & Savings Calculator ---
+            function initHomeCalculator() {
+                const kwhInput = document.getElementById('current-kwh');
+                const kwhValueDisplay = document.getElementById('kwh-value');
+                const calcButton = document.getElementById('calculate-savings');
+                const resultDiv = document.getElementById('savings-result');
+                if (!kwhInput || !kwhValueDisplay || !calcButton || !resultDiv) return;
+
+                // inicializar display del slider
+                kwhValueDisplay.textContent = `${kwhInput.value} kWh`;
+
+                // Data de simulación:
+                const marketPrice = 0.15; 
+                const clickaVozPrice = 0.12;
+                const difference = marketPrice - clickaVozPrice; 
+
+                kwhInput.addEventListener('input', () => {
+                    kwhValueDisplay.textContent = `${kwhInput.value} kWh`;
+                });
+
+                calcButton.addEventListener('click', () => {
+                    const monthlyKwh = parseFloat(kwhInput.value);
+                    if (isNaN(monthlyKwh) || monthlyKwh <= 0) return;
+
+                    const monthlySavings = monthlyKwh * difference;
+                    const annualSavings = monthlySavings * 12;
+
+                    // mejor formato según local
+                    const fmt = (n) => Number(n).toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+                    resultDiv.innerHTML = `
+                        <p class="text-gray-700">Con un consumo de ${monthlyKwh} kWh/mes...</p>
+                        <h4 class="text-2xl font-bold text-teal-700 mt-2">Ahorro estimado: ${fmt(monthlySavings)} €/mes · ${fmt(annualSavings)} €/año</h4>
+                        <p class="text-sm text-gray-500 mt-1">Valores simulados para comparar precios (Clicka Voz ${clickaVozPrice.toFixed(2)} €/kWh vs. mercado ${marketPrice.toFixed(2)} €/kWh).</p>
+                    `;
+                });
+            }
+
+            // --- View 2: IA Analysis simulation ---
+            function initAIAnalysis() {
+                const simulateBtn = document.getElementById('simulate-analysis');
+                const insights = document.getElementById('ai-insights');
+                if (!simulateBtn || !insights) return;
+
+                simulateBtn.addEventListener('click', async () => {
+                    simulateBtn.disabled = true;
+                    const originalText = simulateBtn.textContent;
+                    simulateBtn.textContent = 'Analizando…';
+                    await new Promise(r => setTimeout(r, 900));
+                    insights.classList.remove('hidden');
+                    insights.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    simulateBtn.textContent = originalText;
+                    simulateBtn.disabled = false;
+                });
+            }
+
+            // --- View 3: Sustainability chart ---
+            function initSustainabilityChart() {
+                const canvas = document.getElementById('renewable-chart');
+                if (!canvas) return;
+                const ctx = canvas.getContext && canvas.getContext('2d');
+                if (!ctx) return;
+
+                // Ejemplo: distribución de fuentes (suma 100)
+                const data = {
+                    labels: ['Solar', 'Eólica', 'Hidroeléctrica'],
+                    datasets: [{
+                        data: [55, 30, 15],
+                        backgroundColor: ['#06b6d4', '#10b981', '#60a5fa'],
+                        hoverOffset: 8,
+                        borderWidth: 1
+                    }]
+                };
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.label}: ${ctx.formattedValue}%`
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- View 4: Price comparison chart ---
+            function initPriceComparisonChart() {
+                const canvas = document.getElementById('price-comparison-chart');
+                if (!canvas) return;
+                const ctx = canvas.getContext && canvas.getContext('2d');
+                if (!ctx) return;
+
+                const labels = ['Clicka Voz', 'Media Mercado', 'Comercializadora A', 'Comercializadora B', 'Comercializadora C'];
+                const values = [0.12, 0.15, 0.155, 0.16, 0.158]; // €/kWh simulated
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: '€/kWh',
+                            data: values,
+                            backgroundColor: labels.map(l => l === 'Clicka Voz' ? '#0d9488' : '#94a3b8'),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (value) => `${Number(value).toFixed(2)} €`
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.parsed.y.toFixed(3)} €/kWh`
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initialize all UI pieces
+            initHomeCalculator();
+            initAIAnalysis();
+            initSustainabilityChart();
+            initPriceComparisonChart();
+
+            // Ensure initial active view is 'home'
+            updateActiveView('home');
+        });
+    </script>
+</body>
+</html>
